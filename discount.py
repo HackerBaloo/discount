@@ -1,33 +1,53 @@
 from nameko.web.handlers import http
-from nameko.rpc import RpcProxy
+from nameko.rpc import RpcProxy, rpc
+from random import randrange
+from json import dumps, loads
 
 
-class GatewayService:
-    name = 'gateway'
+class Discount:
+    name = 'discount'
 
-    queue = RpcProxy('queue_service')
-    storage = RpcProxy('storage_service')
+    #storage = RpcProxy('storage') #todo move this from endpoint to buissness logic class
+    event = RpcProxy('event_publisher')
+
+
+    @http('GET', '/discount/test/')
+    def get_discount_test(self, request):
+        print('test-endpoint')
+        self.event.send_user_event('discount-test', 'event')
+        return "handled"
+
 
     @http('GET', '/discount-code/<string:brand>/<string:user>/')
-    def get_discount_code(self, request, brand):
-        airport = self.airports_rpc.get(airport_id)
-        return 200
+    def get_discount_code(self, request, brand, user):
+        print('user-get')
+        event = {}
+        event['brand'] = brand
+        event['user'] = user
+        # todo get code from dependency injected impl
+        code = 'spring2022'
+        event['code'] = code
+        self.event.send_user_event('discount-code-get', event)
+        return "handled"
 
     @http('POST', '/discount-code/<string:brand>/')
-    def post_airport(self, request):
-        data = json.loads(request.get_data(as_text=True))
-        airport_id = self.airports_rpc.create(data['airport'])
+    def create_discount_codes(self, request, brand):
+        print('user-create')
+        form_data = loads(request.get_data(as_text=True))
+        prefix = form_data['prefix']
+        count = form_data['count']
+        data = {}
+        code = f'{prefix}{randrange(0,10000)}'
+        data['code'] = code
+        data['count'] = count
+        # todo move this from endpoint to buissness logic class
+        json_data = dumps(data)
+        #self.storage.store(brand, json_data)
+        print(f'stored: {json_data} at: {brand}')
+        event = {}
+        event['count'] = count
+        event['prefix'] = prefix
+        self.event.send_admin_event('discount-code-post', event)
 
-        return 200
+        return "handled"
 
-    @http('GET', '/trip/<string:trip_id>')
-    def get_trip(self, request, trip_id):
-        trip = self.trips_rpc.get(trip_id)
-        return 200
-
-    @http('POST', '/trip')
-    def post_trip(self, request):
-        data = json.loads(request.get_data(as_text=True))
-        trip_id = self.trips_rpc.create(data['airport_from'], data['airport_to'])
-
-        return 200
