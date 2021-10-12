@@ -1,0 +1,47 @@
+version: "3.5"
+
+services:
+
+  rabbit:
+    container_name: nameko-rabbitmq
+    image: rabbitmq:3
+    ports:
+        - "15673:15672" # Exposing RabbitMQ web management on different port for convenience
+    restart: always
+
+  redis:
+    container_name: nameko-redis
+    image: redis
+    command: [
+      "bash", "-c",
+      '
+       docker-entrypoint.sh
+       --requirepass password
+      '
+    ]
+    restart: always
+
+  discount:
+    build:
+      dockerfile: Dockerfile
+      context: app/discount
+    image: discount:${VER:-latest}
+
+  ui:
+    build:
+      dockerfile: Dockerfile
+      context: app/blazegraph
+    image: ui:${VER:-latest}
+
+  event_publisher:
+    build:
+      dockerfile: Dockerfile
+      context: app/event_publisher
+    image: event_publisher:${VER:-latest}
+
+  storage:
+    build:
+      dockerfile: Dockerfile
+      context: app/storage
+    image: storage:${VER:-latest}
+
